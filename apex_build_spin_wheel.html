@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Apex build spin wheel</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #16181c;
+    color: #eaeaea;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: #f5f5f5;
+  }
+  .sub {
+    font-size: 13px;
+    color: #9a9a9a;
+    margin-top: -0.75rem;
+  }
+  .wheel-wrap {
+    position: relative;
+    width: 320px;
+    height: 320px;
+  }
+  .pointer {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 24px solid #f5f5f5;
+    z-index: 3;
+  }
+  #wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid #3a3d42;
+    transition: transform 4.5s cubic-bezier(0.15, 0.65, 0.15, 1);
+    box-shadow: 0 0 0 6px #1e2024;
+  }
+  .hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #16181c;
+    border: 3px solid #3a3d42;
+    z-index: 2;
+  }
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: #eaeaea;
+    background: #24272c;
+    border: 1px solid #3a3d42;
+    border-radius: 8px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: #2c2f35; }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #spinBtn { width: 180px; }
+  #result {
+    width: 100%;
+    max-width: 440px;
+    min-height: 96px;
+    background: #1e2024;
+    border: 1px solid #2c2f35;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    text-align: center;
+  }
+  #result .label {
+    font-size: 13px;
+    color: #9a9a9a;
+    margin: 0 0 6px;
+  }
+  #result .value {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+    color: #f5f5f5;
+    word-break: break-all;
+  }
+  #copyRow {
+    display: none;
+    width: 100%;
+    max-width: 440px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  #cmdText {
+    background: #1e2024;
+    border: 1px solid #2c2f35;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: 13px;
+    color: #c9c9c9;
+    word-break: break-all;
+  }
+  #copyBtn.copied { background: #1f3a2a; border-color: #2f5c3f; color: #8fe0a8; }
+</style>
+</head>
+<body>
+
+<h1>Apex build spin wheel</h1>
+<p class="sub">165 entries loaded, 2024-2026</p>
+
+<div class="wheel-wrap">
+  <div class="pointer"></div>
+  <div id="wheel"></div>
+  <div class="hub"></div>
+</div>
+
+<button id="spinBtn">Spin</button>
+
+<div id="result">
+  <p class="label">Ready</p>
+  <p class="value">Press spin to pick one at random</p>
+</div>
+
+<div id="copyRow">
+  <div id="cmdText"></div>
+  <button id="copyBtn">Copy command</button>
+</div>
+
+<script>
+const items = [
+["26 June 2026","17:00:50","2410879108722714983",false],
+["13 June 2026","22:00:14","6867501472123750354",false],
+["12 June 2026","17:01:07","8516992978894141334",false],
+["2 June 2026","17:11:37","7801416819563620100",false],
+["29 May 2026","17:01:09","7970499399138467190",false],
+["20 May 2026","16:43:27","1027206361296962562",false],
+["15 May 2026","21:50:44","102145409505748346",false],
+["15 May 2026","17:00:49","3884462350663864894",false],
+["5 May 2026","18:04:20","2841819760414868270",false],
+["1 May 2026","21:12:11","687920742753232464",false],
+["1 May 2026","17:01:17","2354812987105039702",false],
+["23 April 2026","16:07:39","1096175898141081046",false],
+["17 April 2026","17:01:09","1428438623260580768",false],
+["11 April 2026","14:08:47","9039694724168908103",false],
+["4 April 2026","21:51:24","3851298727232795171",false],
+["4 April 2026","20:44:26","1020631683883304704",false],
+["3 April 2026","17:00:45","2480667949492683289",false],
+["31 March 2026","17:59:36","7075397204057953846",false],
+["20 March 2026","17:01:27","8034592081040390928",false],
+["12 March 2026","16:05:37","3478210279670368264",false],
+["8 March 2026","08:42:32","7383795998078215755",false],
+["7 March 2026","17:52:25","5200674917788369267",false],
+["6 March 2026","18:00:20","6596042901265188549",false],
+["26 February 2026","17:09:45","5801387789052452879",false],
+["20 February 2026","18:01:08","7733989704661564837",false],
+["11 February 2026","17:08:47","6648983479449121872",false],
+["7 February 2026","17:09:07","7924143014283625067",false],
+["6 February 2026","22:08:00","4153152011895861525",false],
+["30 January 2026","17:05:48","6518421107462623056",false],
+["24 January 2026","17:23:28","2593775269278855206",false],
+["23 January 2026","18:01:12","7905442131097614256",false],
+["10 January 2026","07:09:17","5385432682989723770",false],
+["9 January 2026","18:01:20","1705071900526529994",false],
+["30 December 2025","14:04:47","2276322770174264672",false],
+["27 December 2025","15:40:57","1239131606366247705",false],
+["26 December 2025","18:03:50","8499448821139792124",false],
+["16 December 2025","17:56:19","5292834179186895742",false],
+["12 December 2025","22:11:41","1372346617254630122",false],
+["12 December 2025","18:39:24","7616446555750043664",false],
+["29 November 2025","15:54:05","7425095600513761202",false],
+["28 November 2025","19:36:07","1794791832295651824",false],
+["28 November 2025","18:01:12","5269255681078584865",false],
+["20 November 2025","17:26:36","1833478774526904842",false],
+["14 November 2025","21:13:06","9180624504137667266",false],
+["14 November 2025","18:01:35","5476872328271244524",false],
+["3 November 2025","17:15:17","599483890622631561",false],
+["31 October 2025","19:16:24","1864409137729669563",false],
+["31 October 2025","17:01:24","2234711179266964375",false],
+["21 October 2025","16:10:24","3702616165559365615",false],
+["17 October 2025","22:31:37","3777721904202655759",false],
+["17 October 2025","20:57:56","4142996989027828478",false],
+["17 October 2025","17:01:11","7878228838966251861",false],
+["3 October 2025","17:01:00","5228855967579664349",false],
+["22 September 2025","16:51:33","35447445114624047",false],
+["19 September 2025","17:01:31","1711526354625471013",false],
+["10 September 2025","16:15:44","8284610809669645850",false],
+["5 September 2025","17:00:59","7499926830378980671",false],
+["22 August 2025","20:09:40","989135452133281171",true],
+["22 August 2025","17:02:58","9168511278061654013",true],
+["22 August 2025","17:00:44","6474886505132366698",false],
+["8 August 2025","17:01:08","8003541390110438090",false],
+["30 July 2025","17:43:20","9125835949007504429",false],
+["24 July 2025","19:54:55","4896186935762350060",false],
+["17 July 2025","21:49:08","1232952309495111027",false],
+["13 July 2025","13:01:32","3546428560448618912",false],
+["12 July 2025","12:57:25","2493336022944235479",false],
+["11 July 2025","17:00:41","6335800595095137011",false],
+["2 July 2025","17:24:56","1990798142845591378",false],
+["27 June 2025","17:00:54","3043321800655748912",false],
+["18 June 2025","19:24:54","2299045476431056353",false],
+["18 June 2025","17:01:04","589416171898258913",false],
+["13 June 2025","21:17:33","7415758057019556819",false],
+["13 June 2025","17:01:13","2563509527335067888",false],
+["9 June 2025","16:04:39","4374533232510696218",false],
+["5 June 2025","16:34:47","1741725465156764391",false],
+["30 May 2025","18:31:56","3356080249422329161",false],
+["23 May 2025","16:07:24","7035427218624337664",false],
+["22 May 2025","16:37:49","4630611507268638659",false],
+["19 May 2025","19:36:56","5915724785668465808",false],
+["16 May 2025","17:00:59","25233329490798591",false],
+["6 May 2025","20:47:40","926556172233653734",false],
+["6 May 2025","16:02:56","2549954556859964268",false],
+["2 May 2025","21:16:17","6362658578435958263",false],
+["18 April 2025","17:01:31","2165851274764079687",false],
+["10 April 2025","16:51:35","8867345169491200319",false],
+["8 April 2025","16:09:55","3816501614645247723",false],
+["4 April 2025","23:53:28","3910221862130980014",false],
+["4 April 2025","17:01:18","2016622786773439965",false],
+["29 March 2025","17:31:47","8210450424725085756",false],
+["28 March 2025","15:34:41","6193313612802520456",false],
+["21 March 2025","17:01:05","698298446005935089",false],
+["12 March 2025","17:25:41","1523091660495421347",false],
+["7 March 2025","18:01:04","2777016323909696400",false],
+["25 February 2025","17:15:39","3104309093268171733",false],
+["21 February 2025","22:33:35","4014145989704722349",false],
+["21 February 2025","18:01:16","7557306701998880810",false],
+["14 February 2025","17:41:16","5385499363164934424",false],
+["7 February 2025","19:50:02","6904583576036586537",false],
+["7 February 2025","18:01:28","3351375464465021579",false],
+["28 January 2025","17:01:57","2552844524420898535",false],
+["24 January 2025","18:01:34","8125101906352587258",false],
+["14 January 2025","17:02:03","202914490659752858",false],
+["10 January 2025","18:01:55","1367215994416166011",false],
+["4 January 2025","22:36:14","4532732456967865565",false],
+["27 December 2024","22:09:32","1817882294435560594",false],
+["27 December 2024","18:04:20","708369386135786145",false],
+["24 December 2024","06:20:05","8722254506861448839",false],
+["24 December 2024","05:46:26","6686119745820462683",false],
+["13 December 2024","23:20:49","6584850097575841067",false],
+["13 December 2024","18:01:13","5305547345255411805",false],
+["3 December 2024","19:26:33","5172583449547504771",false],
+["29 November 2024","20:46:14","3360722074468829150",false],
+["29 November 2024","18:02:41","9082075954800100804",false],
+["18 November 2024","21:14:59","6395906412320028621",false],
+["15 November 2024","18:01:23","1109136838068279011",false],
+["6 November 2024","16:01:47","6508817049216964550",false],
+["1 November 2024","21:32:06","3654025475645442331",false],
+["1 November 2024","17:02:17","3874032407825594363",false],
+["24 October 2024","20:26:21","1330880993914803895",false],
+["23 October 2024","15:07:05","8880074561646275071",false],
+["18 October 2024","17:01:39","909211820069127157",false],
+["8 October 2024","19:13:23","7343208627140783610",false],
+["4 October 2024","22:15:38","4121721572748634658",false],
+["4 October 2024","17:01:13","2154055295465731703",false],
+["20 September 2024","20:53:58","6835551769932497179",false],
+["20 September 2024","19:44:07","9135836134546999090",false],
+["20 September 2024","17:12:20","3935186219455191051",false],
+["12 September 2024","16:34:19","504013107999205640",false],
+["9 September 2024","18:37:24","93811023978502801",false],
+["6 September 2024","22:55:50","7082767344686892828",false],
+["6 September 2024","17:01:31","8146295576575697770",false],
+["23 August 2024","21:15:37","872909814478720200",false],
+["23 August 2024","17:01:11","3313958184175746550",false],
+["9 August 2024","17:01:18","3071126083813386889",false],
+["27 July 2024","20:14:32","5180500033267025309",false],
+["26 July 2024","17:44:30","3448609575458502088",false],
+["18 July 2024","16:02:05","5012696091798757559",false],
+["16 July 2024","21:41:49","5043232171428676962",false],
+["12 July 2024","17:01:31","7850954751661121894",false],
+["28 June 2024","23:06:08","8612738834665184533",false],
+["28 June 2024","17:01:38","4631735593389986042",false],
+["14 June 2024","17:01:12","8322576807180634055",false],
+["31 May 2024","17:00:58","8529762468897318010",false],
+["17 May 2024","17:01:15","2588790404729352981",false],
+["3 May 2024","17:01:04","674120886711990235",false],
+["19 April 2024","17:01:42","8527275474402577505",false],
+["10 April 2024","18:28:11","2012969860441050604",false],
+["5 April 2024","21:06:39","1326831514771333558",false],
+["5 April 2024","17:03:12","7331644450379829999",false],
+["28 March 2024","16:44:19","2240085398563766746",false],
+["22 March 2024","22:51:30","545912485031499880",false],
+["22 March 2024","17:03:15","916527175228470509",false],
+["14 March 2024","16:46:50","8911265080531929218",false],
+["14 March 2024","05:01:19","7263088918464243411",false],
+["12 March 2024","16:04:56","1173566194760021436",false],
+["8 March 2024","18:03:37","4402769812947166584",false],
+["23 February 2024","17:59:45","8167245949716432329",false],
+["13 February 2024","21:40:29","5880049732455398541",false],
+["9 February 2024","18:01:12","1372005950454291233",false],
+["30 January 2024","18:03:34","1859927980973502206",false],
+["26 January 2024","18:01:08","3028185287726525781",false],
+["13 January 2024","03:07:06","5594721279486364761",false],
+["12 January 2024","20:56:43","352194209707137278",false],
+["12 January 2024","18:02:02","8582572854977137154",false],
+["3 January 2024","06:43:47","8431433515001536429",false]
+];
+
+const wheel = document.getElementById('wheel');
+const n = items.length;
+const wedge = 360 / n;
+const colorA = '#24272c';
+const colorB = '#1a1c20';
+let stops = [];
+for (let i = 0; i < n; i++) {
+  const c = i % 2 === 0 ? colorA : colorB;
+  const start = (i * wedge).toFixed(3);
+  const end = ((i + 1) * wedge).toFixed(3);
+  stops.push(c + ' ' + start + 'deg ' + end + 'deg');
+}
+wheel.style.background = 'conic-gradient(' + stops.join(',') + ')';
+
+let rotation = 0;
+let spinning = false;
+let currentCmd = '';
+const btn = document.getElementById('spinBtn');
+const resultBox = document.getElementById('result');
+const copyRow = document.getElementById('copyRow');
+const cmdText = document.getElementById('cmdText');
+const copyBtn = document.getElementById('copyBtn');
+
+btn.addEventListener('click', function () {
+  if (spinning) return;
+  spinning = true;
+  btn.disabled = true;
+  copyRow.style.display = 'none';
+  resultBox.innerHTML = '<p class="label">Spinning</p><p class="value">...</p>';
+  const idx = Math.floor(Math.random() * n);
+  const center = (idx + 0.5) * wedge;
+  const extraSpins = 6 + Math.floor(Math.random() * 3);
+  const currentMod = ((rotation % 360) + 360) % 360;
+  const delta = ((360 - center) - currentMod + 360) % 360;
+  rotation += extraSpins * 360 + delta;
+  wheel.style.transform = 'rotate(' + rotation + 'deg)';
+  setTimeout(function () {
+    spinning = false;
+    btn.disabled = false;
+    const [date, time, id, beta] = items[idx];
+    resultBox.innerHTML =
+      '<p class="label">' + date + ' &middot; ' + time + ' UTC' + (beta ? ' &middot; beta' : '') + '</p>' +
+      '<p class="value">' + id + '</p>';
+    currentCmd = 'download_depot 1533390 1533391 ' + id;
+    cmdText.textContent = currentCmd;
+    copyRow.style.display = 'flex';
+    copyBtn.textContent = 'Copy command';
+    copyBtn.classList.remove('copied');
+  }, 4600);
+});
+
+copyBtn.addEventListener('click', function () {
+  if (!currentCmd) return;
+  function showCopied() {
+    copyBtn.textContent = 'Copied';
+    copyBtn.classList.add('copied');
+    setTimeout(function () {
+      copyBtn.textContent = 'Copy command';
+      copyBtn.classList.remove('copied');
+    }, 1500);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(currentCmd).then(showCopied).catch(function () {
+      const ta = document.createElement('textarea');
+      ta.value = currentCmd;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopied();
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = currentCmd;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showCopied();
+  }
+});
+</script>
+
+</body>
+</html>
